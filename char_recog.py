@@ -4,7 +4,17 @@ import os
 import random
 import argparse
 import cv2
-char_list = ["3","4","5","7","a","d","k","l","q","v"]
+import pickle
+
+char_list = []
+char_num = 10
+
+## Get Char recog dict
+with open(os.path.join(os.curdir,"data","char_dict.dat"), 'rb') as fp:
+    # global char_list
+    data = pickle.load(fp)
+    char_list = list(data.keys())
+    char_num = len(data)
 
 # %matplotlib inline
 def add_layer(inputs, in_size, out_size, activation_function=None):
@@ -26,9 +36,9 @@ def add_layer(inputs, in_size, out_size, activation_function=None):
 
 
 xs = tf.placeholder(tf.float32,[None,400])
-ys = tf.placeholder(tf.float32,[None,10])
+ys = tf.placeholder(tf.float32,[None,char_num])
 
-prediction = add_layer(xs,400,10,activation_function=tf.nn.softmax)
+prediction = add_layer(xs,400,char_num,activation_function=tf.nn.softmax)
 
 cross_entropy = tf.reduce_mean(-tf.reduce_sum(ys * tf.log(prediction),
                                               reduction_indices=[1]))
@@ -62,7 +72,7 @@ pred = sess.run(prediction,feed_dict={xs:[final_mat]})
 print("Prediction Results")
 print("ID","Possibility")
 for i in range(len(pred[0])):
-    print(i,float(pred[0][i])*100,"%")
+    print(char_list[i],float(pred[0][i])*100,"%")
 
 id = sess.run(tf.argmax(pred,1))
 id = id[0]

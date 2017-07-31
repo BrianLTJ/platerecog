@@ -4,6 +4,9 @@ import os
 import pickle
 import random
 
+global char_num
+char_num = 10
+
 # %matplotlib inline
 def add_layer(inputs, in_size, out_size, activation_function=None):
     with tf.name_scope("layer"):
@@ -48,11 +51,16 @@ def compute_accuracy(in_test_data,out_test_data):
     result = sess.run(accuracy, feed_dict={xs:in_test_data,ys:out_test_data})
     return result
 
+## Get Char recog dict
+with open(os.path.join(os.curdir,"data","char_dict.dat"), 'rb') as fp:
+    data = pickle.load(fp)
+    char_num = len(data)
+
 
 xs = tf.placeholder(tf.float32,[None,400])
-ys = tf.placeholder(tf.float32,[None,10])
+ys = tf.placeholder(tf.float32,[None,char_num])
 
-prediction = add_layer(xs,400,10,activation_function=tf.nn.softmax)
+prediction = add_layer(xs,400,char_num,activation_function=tf.nn.softmax)
 
 cross_entropy = tf.reduce_mean(-tf.reduce_sum(ys * tf.log(prediction),
                                               reduction_indices=[1]))
@@ -72,25 +80,30 @@ test_data = []
 test_out = []
 
 for file in file_list:
-    if '_train_' in file:
-        with open(os.path.join(os.curdir,"data",file),'rb') as fp:
-            data = pickle.load(fp)
-            for d in data:
-                train_out.append(d["char"])
-                train_data.append(d["data"])
+    filepath = os.path.join(os.curdir,"data",file)
+    if os.path.isfile(filepath):
+        if '_train_' in file:
+            with open(filepath,'rb') as fp:
+                data = pickle.load(fp)
+                for d in data:
+                    train_out.append(d["char"])
+                    train_data.append(d["data"])
 
-    elif '_test_' in file:
-        with open(os.path.join(os.curdir,"data",file), 'rb') as fp:
-            data = pickle.load(fp)
-            for d in data:
-                test_out.append(d["char"])
-                test_data.append(d["data"])
+        elif '_test_' in file:
+            with open(filepath, 'rb') as fp:
+                data = pickle.load(fp)
+                for d in data:
+                    test_out.append(d["char"])
+                    test_data.append(d["data"])
 
-
-for i in range(2000):
-    patch_data, patch_out = pick_data(100, train_data, train_out)
+last_accuracy = 0.0
+for i in range(3000):
+    patch_data, patch_out = pick_data(800, train_data, train_out)
     sess.run(train_step,feed_dict={xs:patch_data,ys:patch_out})
     if i % 50 == 0:
-        print(compute_accuracy(test_data,test_out))
+        this_accuracy = compute_accuracy(test_data,test_out)
+        print("Loop:",i,"Accuracy",this_accuracy,(this_accuracy-last_accuracy))
+        last_accuracy = this_accuracy
+
 save_path=saver.save(sess, os.path.join("network","save.ckpt"))
-print("Save to path",save_path)
+print("Network saved to path",save_path)
